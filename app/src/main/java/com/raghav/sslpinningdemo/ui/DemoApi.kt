@@ -5,6 +5,6 @@ import retrofit2.Response
 import retrofit2.http.GET
 
 interface DemoApi {
-    @GET("feature")
-    suspend fun getFeature(): Response<DemoResponse>
+    @GET("/demo_response")
+    suspend fun getDemoResponse(): Response<DemoResponse>
 }

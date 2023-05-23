@@ -41,16 +41,18 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val logging = HttpLoggingInterceptor()
-        val level = logging.setLevel(HttpLoggingInterceptor.Level.BODY)
+        val interceptor = HttpLoggingInterceptor().apply {
+            level = HttpLoggingInterceptor.Level.BODY
+        }
+
         builder = OkHttpClient()
             .newBuilder()
-            .addInterceptor(DemoInterceptor(applicationContext))
+            .addInterceptor(interceptor)
             .build()
 
         demoApi =
             Retrofit.Builder()
-                .baseUrl("https://www.demoapi.com/")
+                .baseUrl("https://192.168.1.23:8443")
                 .addConverterFactory(GsonConverterFactory.create())
                 .client(builder)
                 .build()
@@ -93,7 +95,7 @@ class MainActivity : ComponentActivity() {
         if (requestInProgress) {
             LaunchedEffect(key1 = true) {
                 delay(2_000)
-                response = demoApi.getFeature().body()?.title.toString()
+                response = demoApi.getDemoResponse().body()?.title.toString()
                 requestInProgress = false
             }
         }
