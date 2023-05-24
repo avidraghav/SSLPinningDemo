@@ -8,10 +8,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material.Button
 import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
+import androidx.compose.material.Switch
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -36,8 +38,6 @@ class MainActivity : ComponentActivity() {
 
     private lateinit var builder: OkHttpClient
 
-    private lateinit var demoApi: DemoApi
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -49,14 +49,6 @@ class MainActivity : ComponentActivity() {
             .newBuilder()
             .addInterceptor(interceptor)
             .build()
-
-        demoApi =
-            Retrofit.Builder()
-                .baseUrl("https://192.168.1.23:8443")
-                .addConverterFactory(GsonConverterFactory.create())
-                .client(builder)
-                .build()
-                .create(DemoApi::class.java)
 
         setContent {
             SSLPinningDemoTheme {
@@ -73,32 +65,60 @@ class MainActivity : ComponentActivity() {
 
     @Composable
     fun App(modifier: Modifier = Modifier) {
-        var requestInProgress by remember { mutableStateOf(false) }
+        var apiRequestInProgress by remember { mutableStateOf(false) }
         var response by remember { mutableStateOf("") }
+        var httpsEnabled by remember { mutableStateOf(true) }
 
         Column(
             modifier = modifier,
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(text = response)
+            Text(text = response, modifier = Modifier.padding(8.dp))
             Spacer(modifier = Modifier.height(20.dp))
-            Button(onClick = { requestInProgress = true }) {
-                if (!requestInProgress) {
+            Button(onClick = { apiRequestInProgress = true }) {
+                if (!apiRequestInProgress) {
                     Text(text = "Make Api Call")
                 } else {
                     CircularProgressIndicator(color = Color.White)
                 }
             }
+            Spacer(modifier = Modifier.height(20.dp))
+            Switch(
+                checked = httpsEnabled,
+                onCheckedChange = { httpsEnabled = it },
+                enabled = !apiRequestInProgress
+            )
+            Text(
+                text = "HTTPS enabled: ${if (httpsEnabled) "true" else "false"}",
+                modifier = Modifier.padding(8.dp)
+            )
         }
 
-        if (requestInProgress) {
+        if (apiRequestInProgress) {
             LaunchedEffect(key1 = true) {
                 delay(2_000)
-                response = demoApi.getDemoResponse().body()?.title.toString()
-                requestInProgress = false
+                response = try {
+                    createApi(httpsEnabled).getDemoResponse().body()?.title.toString()
+                } catch (e: Exception) {
+                    e.message.toString()
+                }
+                apiRequestInProgress = false
             }
         }
+    }
+
+    private fun getBaseUrl(isHttpsEnabled: Boolean): String {
+        return if (isHttpsEnabled) "https://192.168.1.23:8443" else "http://192.168.1.23:8080"
+    }
+
+    private fun createApi(isHttpsEnabled: Boolean): DemoApi {
+        return Retrofit.Builder()
+            .baseUrl(getBaseUrl(isHttpsEnabled))
+            .addConverterFactory(GsonConverterFactory.create())
+            .client(builder)
+            .build()
+            .create(DemoApi::class.java)
     }
 
     @Preview(showBackground = true)
